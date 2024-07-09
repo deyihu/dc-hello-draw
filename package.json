@@ -1,0 +1,25 @@
+{
+  "name": "hello-draw",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@dvgis/dc-sdk": "^3.4.0",
+    "element-plus": "^2.7.6",
+    "maptalks": "1.0.0-rc.33",
+    "maptalks.routeplayer": "1.0.0-rc.1",
+    "vue": "^3.4.29",
+    "vue-router": "4"
+  },
+  "devDependencies": {
+    "@dvgis/vite-plugin-dc": "^2.2.0",
+    "@vitejs/plugin-vue": "^5.0.5",
+    "vite": "^5.3.1",
+    "vite-plugin-externals": "^0.6.2"
+  }
+}
