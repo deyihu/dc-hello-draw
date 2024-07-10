@@ -89,6 +89,11 @@ function updateLine(coordinate) {
         point.attr = {
             index: c.index
         }
+        point.on(DC.MouseEventType.RIGHT_CLICK, (e) => {
+            if(e&&e.overlay){
+                editPoint(e.overlay.attr);
+            }
+        })
         points.push(point);
 
         const label = createLabel(c.coordinate, index + 2);
@@ -177,7 +182,7 @@ function editPoint(item) {
     })[0];
     if (point) {
         plot.edit(point, (e) => {
-           console.log(e);
+            console.log(e);
         }, true);
     }
 }
@@ -287,7 +292,7 @@ onUnmounted(() => {
                                 <el-input v-model="item.altitude" size="small" />
                             </div>
                         </div>
-                        <div v-if="index>0" class="flex data-item">
+                        <div v-if="index > 0" class="flex data-item">
                             <div class="data-label">操作</div>
                             <div class="data-value">
                                 <button @click="editPoint(item)">编辑</button>
