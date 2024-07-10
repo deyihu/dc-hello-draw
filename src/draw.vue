@@ -90,7 +90,7 @@ function updateLine(coordinate) {
             index: c.index
         }
         point.on(DC.MouseEventType.RIGHT_CLICK, (e) => {
-            if(e&&e.overlay){
+            if (e && e.overlay) {
                 editPoint(e.overlay.attr);
             }
         })
@@ -181,8 +181,13 @@ function editPoint(item) {
         return g && g.attr && g.attr.index === item.index;
     })[0];
     if (point) {
-        plot.edit(point, (e) => {
-            console.log(e);
+        plot.edit(point, (overlay) => {
+            const { index } = overlay.attr;
+            const item = state.lineData[index];
+            if (item) {
+                state.lineData[index].coordinate = formatCoordinate(overlay.position);
+                updateLine();
+            }
         }, true);
     }
 }
