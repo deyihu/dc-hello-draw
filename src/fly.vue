@@ -468,6 +468,7 @@ const followChange = () => {
 .map-container {
     width: calc(100% - 300px);
     height: 100%;
+}
 
 .info-panel {
     display: none;
