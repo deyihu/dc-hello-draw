@@ -11,6 +11,7 @@
   "dependencies": {
     "@dvgis/dc-sdk": "^3.4.0",
     "element-plus": "^2.7.6",
+    "geolib": "^3.3.4",
     "maptalks": "1.0.0-rc.33",
     "maptalks.routeplayer": "1.0.0-rc.1",
     "vue": "^3.4.29",

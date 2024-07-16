@@ -6,7 +6,8 @@ import {
     getLabelStyle, createBaseLayer, createTileSetLayer,
     airPortCoordinate, formatCoordinate, ICONSIZE,
     ICONOFFSET, LINECOLOR, LINEWIDTH, createLabel,
-    getMiddleCoordiante, MIDDLE_ICONSIZE, calDistance
+    getMiddleCoordiante, MIDDLE_ICONSIZE, calDistance, calBearing,
+    toRadian
 } from './common';
 
 const mapcontainer = ref(null);
@@ -14,7 +15,8 @@ const infopanel = ref(null);
 
 const state = reactive({
     lineData: [],
-    speed: 1
+    speed: 1,
+    follow: true
 });
 
 //飞行实时信息
@@ -28,7 +30,8 @@ const infoState = reactive({
 let viewer, plot, drawLayer, layer, player, htmlLayer;
 let tempLine, tempDashLine, points, model, divPanel;
 
-let preTime, preCoordinate;
+let preTime, preCoordinate, preVertex;
+let Cesium;
 
 //飞行路线
 function updateLine(coordinate) {
@@ -97,7 +100,7 @@ function addAirPort() {
 
     layer.addOverlay(airPort);
 
-    const label = createLabel(airPortCoordinate,'西安机场');
+    const label = createLabel(airPortCoordinate, '西安机场');
     layer.addOverlay(label);
 
 
@@ -120,13 +123,19 @@ function addModel() {
     const routeData = formatRouteData(cloneData, {
         duration: 1000 * 60 * 10 //飞行时间
     });
-	//轨迹播放插件
+    //轨迹播放插件
     player = new RoutePlayer(routeData);
+    //播放事件
     player.on('playing', e => {
         updateInfoPanel(e);
     });
+    //顶点事件
     player.on('vertex', e => {
+        preVertex = e.data.coordinate;
         updateInfoPanel(e);
+    });
+    player.on('playend', e => {
+        removeLookAt();
     });
 
 }
@@ -156,11 +165,39 @@ function updateInfoPanel(e) {
         }
     }
     if (preCoordinate && preTime) {
-	//实时速度计算
+        //实时速度计算
         const distance = calDistance(coordinate, preCoordinate);
         const dTime = time - preTime;
         const speed = distance / (dTime) * 1000;
-        infoState.speed = Math.round(speed);
+        infoState.speed = isNaN(speed) ? 0 : Math.round(speed)
+
+    } else {
+        infoState.speed = 0;
+    }
+    if (preVertex && state.follow) {
+        const bearing = calBearing(preVertex, coordinate);
+        const { heading, roll, alt, pitch } = viewer.cameraPosition;
+        const position = new DC.Position(coordinate[0], coordinate[1], 50);
+        const destination = DC.Transform.transformWGS84ToCartesian(position);
+
+        viewer.camera.lookAt(
+            destination,
+            new Cesium.HeadingPitchRange(
+                toRadian(bearing),
+                toRadian(pitch),
+                200
+            )
+        )
+
+        // viewer.scene.camera.setView({
+        //     destination: destination, // 点的坐标
+        //     orientation: {
+        //         heading: toRadian(bearing),
+        //         // pitch: toRadian(pitch),
+        //         // roll: toRadian(roll)
+
+        //     }
+        // });
     }
 
     preCoordinate = coordinate;
@@ -188,6 +225,7 @@ function getLineData() {
 
 function init() {
     function initViewer() {
+        Cesium = DC.__namespace.Cesium;
 
         viewer = new DC.Viewer(mapcontainer.value);
 
@@ -256,6 +294,8 @@ function reset() {
         return;
     }
     player.reset();
+    preVertex = null;
+    preCoordinate = null;
     updateInfoPanel();
 
 }
@@ -267,6 +307,18 @@ const updateSpeed = () => {
     player.setSpeed(state.speed);
 }
 
+const removeLookAt = () => {
+    if (viewer) {
+        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY)
+    }
+}
+
+
+const followChange = () => {
+    if (!state.follow) {
+        removeLookAt();
+    }
+}
 
 </script>
 <template>
@@ -316,7 +368,11 @@ const updateSpeed = () => {
             </div>
             <div class="flex tool-item" style="width:300px;">
                 <span class="demonstration">倍速:</span>
-                <el-slider v-model="state.speed" :min="1" :max="20" @change="updateSpeed" />
+                <el-slider v-model="state.speed" :min="1" :max="50" @change="updateSpeed" />
+            </div>
+            <div class="flex tool-item">
+
+                <el-checkbox v-model="state.follow" @change="followChange">视角跟随</el-checkbox>
             </div>
 
             <!-- <button @click="drawEnd">结束</button> -->
@@ -412,7 +468,6 @@ const updateSpeed = () => {
 .map-container {
     width: calc(100% - 300px);
     height: 100%;
-}
 
 .info-panel {
     display: none;

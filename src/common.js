@@ -1,3 +1,4 @@
+import { getRhumbLineBearing } from 'geolib';
 //机场坐标，业务这个应该是从数据里选的，这里方面测试写死了
 export const airPortCoordinate = [108.95938654017978, 34.222197204782304, 0];
 
@@ -10,7 +11,7 @@ export const LINEWIDTH = 2;
 const pi = Math.PI / 180;
 const R = 6378137;
 
-function toRadian(d) {
+export function toRadian(d) {
     return d * pi;
 }
 
@@ -41,6 +42,11 @@ export function calDistance(c1, c2) {
     }
     return Math.sqrt(d * d + dz * dz);
 }
+
+export function calBearing(c1, c2) {
+    return getRhumbLineBearing(c1, c2);
+}
+
 
 export function formatCoordinate(position) {
     if (Array.isArray(position)) {
