@@ -485,6 +485,7 @@ const followChange = () => {
 </style>
 <style>
 .div-icon {
-    background-color: transparent
+    background-color: transparent;
+    visibility: visible !important;
 }
 </style>
