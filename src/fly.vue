@@ -108,7 +108,7 @@ function addAirPort() {
 }
 //无人机模型
 function addModel() {
-    model = new DC.Model(airPortCoordinate, './drone.glb');
+    model = new DC.Model(airPortCoordinate, './drone1.glb');
     model.setStyle({
         scale: 3
     })
