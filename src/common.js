@@ -50,7 +50,7 @@ export function calDistance(c1, c2) {
 }
 
 export function calBearing(c1, c2) {
-    return getRhumbLineBearing(c1.slice(0, 2), c2.slice(0, 2)) + 5;
+    return getRhumbLineBearing(c1.slice(0, 2), c2.slice(0, 2)) + 3;
 }
 
 

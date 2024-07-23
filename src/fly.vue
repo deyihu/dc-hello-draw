@@ -223,7 +223,7 @@ function updateInfoPanel(e) {
     } else {
         infoState.speed = 0;
     }
-    if (preVertex && state.follow && !isRotating) {
+    if (preVertex && coordinate && state.follow && !isRotating && !coordinateEqual(preVertex, coordinate)) {
         const bearing = calBearing(preVertex, coordinate);
         animateCamera(bearing, coordinate);
     }
