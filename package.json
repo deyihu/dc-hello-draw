@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@dvgis/dc-sdk": "^3.4.0",
+    "animejs": "^3.2.2",
     "element-plus": "^2.7.6",
     "geolib": "^3.3.4",
     "maptalks": "1.0.0-rc.33",

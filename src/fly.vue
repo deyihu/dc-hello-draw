@@ -7,15 +7,16 @@ import {
     airPortCoordinate, formatCoordinate, ICONSIZE,
     ICONOFFSET, LINECOLOR, LINEWIDTH, createLabel,
     getMiddleCoordiante, MIDDLE_ICONSIZE, calDistance, calBearing,
-    toRadian
+    toRadian, coordinateEqual
 } from './common';
+import anime from 'animejs/lib/anime.es.js';
 
 const mapcontainer = ref(null);
 const infopanel = ref(null);
 
 const state = reactive({
     lineData: [],
-    speed: 1,
+    speed: 10,
     follow: true
 });
 
@@ -30,7 +31,7 @@ const infoState = reactive({
 let viewer, plot, drawLayer, layer, player, htmlLayer;
 let tempLine, tempDashLine, points, model, divPanel;
 
-let preTime, preCoordinate, preVertex;
+let preTime, preCoordinate, preVertex, isRotating = false;
 let Cesium;
 
 //飞行路线
@@ -124,13 +125,46 @@ function addModel() {
         duration: 1000 * 60 * 10 //飞行时间
     });
     //轨迹播放插件
-    player = new RoutePlayer(routeData);
+    player = new RoutePlayer(routeData, {
+        ...state
+    });
     //播放事件
     player.on('playing', e => {
         updateInfoPanel(e);
     });
     //顶点事件
     player.on('vertex', e => {
+        const coordinate = e.coordinate;
+        const index = e.index;
+        const item = player.getData()[index + 1];
+        let nextCoordinate
+        if (item) {
+            nextCoordinate = item.coordinate;
+        }
+        if (coordinate && nextCoordinate && state.follow && !coordinateEqual(coordinate, nextCoordinate)) {
+            isRotating = true;
+            const bearing = calBearing(coordinate, nextCoordinate);
+            const { heading, roll, alt, pitch } = viewer.cameraPosition;
+            const battery = {
+                bearing: heading
+            }
+            // console.log(bearing);
+            anime({
+                targets: battery,
+                bearing,
+                // round: 1,
+                easing: 'linear',
+                delay: 200,
+                update: function () {
+                    // console.log(battery.bearing)
+                    animateCamera(battery.bearing, coordinate);
+                },
+                complete() {
+                    // animateCamera(battery.bearing, coordinate);
+                    isRotating = false;
+                }
+            });
+        }
         preVertex = e.data.coordinate;
         updateInfoPanel(e);
     });
@@ -138,6 +172,21 @@ function addModel() {
         removeLookAt();
     });
 
+}
+
+function animateCamera(bearing, coordinate) {
+    const { heading, roll, alt, pitch } = viewer.cameraPosition;
+    const position = new DC.Position(coordinate[0], coordinate[1], 50);
+    const destination = DC.Transform.transformWGS84ToCartesian(position);
+
+    viewer.camera.lookAt(
+        destination,
+        new Cesium.HeadingPitchRange(
+            toRadian(bearing),
+            toRadian(pitch),
+            200
+        )
+    )
 }
 //信息框
 function addInfoPanel() {
@@ -174,30 +223,9 @@ function updateInfoPanel(e) {
     } else {
         infoState.speed = 0;
     }
-    if (preVertex && state.follow) {
+    if (preVertex && state.follow && !isRotating) {
         const bearing = calBearing(preVertex, coordinate);
-        const { heading, roll, alt, pitch } = viewer.cameraPosition;
-        const position = new DC.Position(coordinate[0], coordinate[1], 50);
-        const destination = DC.Transform.transformWGS84ToCartesian(position);
-
-        viewer.camera.lookAt(
-            destination,
-            new Cesium.HeadingPitchRange(
-                toRadian(bearing),
-                toRadian(pitch),
-                200
-            )
-        )
-
-        // viewer.scene.camera.setView({
-        //     destination: destination, // 点的坐标
-        //     orientation: {
-        //         heading: toRadian(bearing),
-        //         // pitch: toRadian(pitch),
-        //         // roll: toRadian(roll)
-
-        //     }
-        // });
+        animateCamera(bearing, coordinate);
     }
 
     preCoordinate = coordinate;

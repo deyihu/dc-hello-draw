@@ -28,6 +28,12 @@ function measureLenBetween(c1, c2) {
     return b;
 }
 
+export function coordinateEqual(c1, c2) {
+    const x1 = c1[0], y1 = c1[1], z1 = c1[2];
+    const x2 = c2[0], y2 = c2[1], z2 = c2[2];
+    return x1 === x2 && y1 === y2 && z1 === z2;
+}
+
 /**
  * 两点之间的距离
  * @param {*} c1 
@@ -44,7 +50,7 @@ export function calDistance(c1, c2) {
 }
 
 export function calBearing(c1, c2) {
-    return getRhumbLineBearing(c1, c2);
+    return getRhumbLineBearing(c1.slice(0, 2), c2.slice(0, 2)) + 5;
 }
 
 
