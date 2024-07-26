@@ -7,9 +7,33 @@ export const MIDDLE_ICONSIZE = [20, 20];
 export const ICONOFFSET = { x: 0, y: -16 };
 export const LINECOLOR = '#FFFFFF';
 export const LINEWIDTH = 2;
+export const MAX_EXTENT = [108.95453409344537, 34.21569072322936, 108.96650083393185, 34.22526169733668];
+export const MAXPITCH = 90;
 
 const pi = Math.PI / 180;
 const R = 6378137;
+
+export function pointInExtent(point, extent) {
+    point = formatCoordinate(point);
+    const [lng, lat] = point;
+    const [minx, miny, maxx, maxy] = extent;
+    return lng >= minx && lng <= maxx && lat >= miny && lat <= maxy;
+}
+
+export function getExtentCenter(extent) {
+    const [minx, miny, maxx, maxy] = extent;
+    return [minx / 2 + maxx / 2, miny / 2 + maxy / 2];
+}
+
+export function extentToPoints(extent) {
+    const [minx, miny, maxx, maxy] = extent;
+    return [
+        [minx, miny],
+        [minx, maxy],
+        [maxx, maxy],
+        [maxx, miny]
+    ];
+}
 
 export function toRadian(d) {
     return d * pi;

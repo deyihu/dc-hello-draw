@@ -7,7 +7,7 @@ import {
     airPortCoordinate, formatCoordinate, ICONSIZE,
     ICONOFFSET, LINECOLOR, LINEWIDTH, createLabel,
     getMiddleCoordiante, MIDDLE_ICONSIZE, calDistance, calBearing,
-    toRadian, coordinateEqual
+    toRadian, coordinateEqual, pointInExtent, MAX_EXTENT, getExtentCenter, extentToPoints
 } from './common';
 import anime from 'animejs/lib/anime.es.js';
 
@@ -28,11 +28,12 @@ const infoState = reactive({
     altitude: 0
 })
 
-let viewer, plot, drawLayer, layer, player, htmlLayer;
+let viewer, plot, drawLayer, layer, player, htmlLayer, debugLayer;
 let tempLine, tempDashLine, points, model, divPanel;
 
 let preTime, preCoordinate, preVertex, isRotating = false;
 let Cesium;
+let cameraPoistionList = [], isFixExtenting = false, cameraPoint;
 
 //飞行路线
 function updateLine(coordinate) {
@@ -174,10 +175,14 @@ function addModel() {
 
 }
 
-function animateCamera(bearing, coordinate) {
-    const { heading, roll, alt, pitch } = viewer.cameraPosition;
+function animateCamera(bearing, coordinate, pitch) {
+    // const { heading, roll, alt } = viewer.cameraPosition;
+    const currentPitch = viewer.cameraPosition.pitch;
     const position = new DC.Position(coordinate[0], coordinate[1], 50);
     const destination = DC.Transform.transformWGS84ToCartesian(position);
+    if (pitch == null) {
+        pitch = currentPitch;
+    }
 
     viewer.camera.lookAt(
         destination,
@@ -251,11 +256,123 @@ function getLineData() {
     })
 }
 
+function getViewerCenter() {
+    const center = viewer.camera.pickEllipsoid(
+        new Cesium.Cartesian2(
+            viewer.canvas.clientWidth / 2,
+            viewer.canvas.clientHeight / 2
+        )
+    );
+    //将笛卡尔坐标转化为经纬度坐标
+    const cartographic = Cesium.Cartographic.fromCartesian(center);
+    const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+    const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+    return [longitude, latitude];
+
+}
+
+function limitViewExtent() {
+    let preTime = Date.now();
+    viewer.on(DC.SceneEventType.CAMERA_CHANGED, e => {
+        const cameraPosition = viewer.cameraPosition;
+        const center = getViewerCenter();
+        if (cameraPoint) {
+
+            center[2] = 50;
+            cameraPoint.position = center;
+        }
+        if (isFixExtenting) {
+            return;
+        }
+        // const time = Date.now();
+        // if (time - preTime < 500) {
+        //     return;
+        // }
+        // preTime = time;
+        // const { lng, lat, pitch } = cameraPosition;
+        if (pointInExtent(center, MAX_EXTENT) && !isFixExtenting) {
+            cameraPoistionList.push(cameraPosition);
+        } else {
+            if (!pointInExtent(center, MAX_EXTENT)) {
+                console.error('viewer extent overflow extent');
+            }
+            if (cameraPoistionList.length === 0 || isFixExtenting) {
+                return;
+            }
+
+            const { heading, alt, lng, lat, pitch } = viewer.cameraPosition;
+            const battery = {
+                bearing: heading,
+                lng,
+                lat,
+                pitch
+            };
+            const pre = cameraPoistionList[cameraPoistionList.length - 1];
+            const fixCenter = getExtentCenter(MAX_EXTENT);
+            const target = {
+                bearing: pre.heading,
+                ...pre,
+                lng: fixCenter[0],
+                lat: fixCenter[1],
+                pitch: -1
+
+            }
+            isFixExtenting = true;
+            anime({
+                targets: battery,
+                ...target,
+                // round: 1,
+                easing: 'linear',
+                delay: 200,
+                update: function () {
+                    // console.log(battery.bearing)
+                    const coordinate = [battery.lng, battery.lat];
+                    animateCamera(battery.bearing, coordinate, battery.pitch);
+                },
+                complete() {
+                    isFixExtenting = false;
+                    cameraPoistionList = [];
+                    removeLookAt();
+                    // animateCamera(battery.bearing, coordinate);
+                    // isRotating = false;
+                }
+            });
+
+
+        }
+
+    })
+}
+
+function addDebugPoints() {
+    const coordinates = extentToPoints(MAX_EXTENT);
+    const points = coordinates.map(c => {
+        const point = new DC.Billboard(c, './icons/区边界.png');
+        point.size = ICONSIZE;
+        point.setStyle({
+            pixelOffset: ICONOFFSET
+        });
+        return point;
+    });
+    debugLayer.addOverlays(points);
+
+    const coordinate = formatCoordinate(viewer.cameraPosition);
+    coordinate[2] = 0;
+    cameraPoint = new DC.Billboard(coordinate, './icons/camera.png');
+    cameraPoint.size = ICONSIZE;
+    cameraPoint.setStyle({
+        pixelOffset: ICONOFFSET
+    });
+    debugLayer.addOverlay(cameraPoint);
+}
+
 function init() {
     function initViewer() {
         Cesium = DC.__namespace.Cesium;
 
         viewer = new DC.Viewer(mapcontainer.value);
+
+        viewer.setPitchRange(-90, 5);
 
         createBaseLayer(viewer);
         const tileset = createTileSetLayer(viewer);
@@ -277,9 +394,16 @@ function init() {
         viewer.addLayer(layer);
 
         htmlLayer = new DC.HtmlLayer('htmllayer');
-        viewer.addLayer(htmlLayer)
+        viewer.addLayer(htmlLayer);
+
+        debugLayer = new DC.VectorLayer('debug');
+        viewer.addLayer(debugLayer);
+
+
 
         getLineData();
+        limitViewExtent();
+        addDebugPoints();
 
         // const view = new DC.Position(108.9596180737812, 34.21399014654956, 313);
         // viewer.flyToPosition(view);
