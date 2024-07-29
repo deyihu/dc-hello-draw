@@ -33,7 +33,7 @@ let tempLine, tempDashLine, points, model, divPanel;
 
 let preTime, preCoordinate, preVertex, isRotating = false;
 let Cesium;
-let cameraPoistionList = [], isFixExtenting = false, cameraPoint;
+let isFixExtenting = false, viewPoint;
 
 //飞行路线
 function updateLine(coordinate) {
@@ -175,10 +175,10 @@ function addModel() {
 
 }
 
-function animateCamera(bearing, coordinate, pitch) {
+function animateCamera(bearing, coordinate, pitch, altitude = 50) {
     // const { heading, roll, alt } = viewer.cameraPosition;
     const currentPitch = viewer.cameraPosition.pitch;
-    const position = new DC.Position(coordinate[0], coordinate[1], 50);
+    const position = new DC.Position(coordinate[0], coordinate[1], altitude);
     const destination = DC.Transform.transformWGS84ToCartesian(position);
     if (pitch == null) {
         pitch = currentPitch;
@@ -256,11 +256,17 @@ function getLineData() {
     })
 }
 
-function getViewerCenter() {
+function getViewerViewCenter() {
+    const pitch = viewer.cameraPosition.pitch;
+    const scale = Math.abs(pitch) / 90;
+    const height = viewer.canvas.clientHeight;
+    const halfHeight = height / 2;
+    const offsetHeight = halfHeight - (scale) * halfHeight;
+
     const center = viewer.camera.pickEllipsoid(
         new Cesium.Cartesian2(
             viewer.canvas.clientWidth / 2,
-            viewer.canvas.clientHeight / 2
+            halfHeight + offsetHeight
         )
     );
     //将笛卡尔坐标转化为经纬度坐标
@@ -272,50 +278,50 @@ function getViewerCenter() {
 }
 
 function limitViewExtent() {
-    let preTime = Date.now();
     viewer.on(DC.SceneEventType.CAMERA_CHANGED, e => {
         const cameraPosition = viewer.cameraPosition;
-        const center = getViewerCenter();
-        if (cameraPoint) {
-
-            center[2] = 50;
-            cameraPoint.position = center;
+        const center = getViewerViewCenter();
+        if (viewPoint) {
+            center[2] = 0;
+            viewPoint.position = center;
         }
         if (isFixExtenting) {
             return;
         }
-        // const time = Date.now();
-        // if (time - preTime < 500) {
-        //     return;
-        // }
-        // preTime = time;
-        // const { lng, lat, pitch } = cameraPosition;
         if (pointInExtent(center, MAX_EXTENT) && !isFixExtenting) {
-            cameraPoistionList.push(cameraPosition);
+            // cameraPoistionList.push(cameraPosition);
         } else {
             if (!pointInExtent(center, MAX_EXTENT)) {
                 console.error('viewer extent overflow extent');
             }
-            if (cameraPoistionList.length === 0 || isFixExtenting) {
+            if (isFixExtenting) {
                 return;
             }
+            const { heading, alt, pitch } = cameraPosition;
 
-            const { heading, alt, lng, lat, pitch } = viewer.cameraPosition;
+            let x = center[0], y = center[1];
+            const [minx, miny, maxx, maxy] = MAX_EXTENT;
+            const offset = 0.0001;
+            if (x < minx) {
+                x = minx + offset;
+            }
+            if (x > maxx) {
+                x = maxx - offset;
+            }
+            if (y < miny) {
+                y = miny + offset;
+            }
+            if (y > maxy) {
+                y = maxy - offset;
+            }
+
             const battery = {
-                bearing: heading,
-                lng,
-                lat,
-                pitch
-            };
-            const pre = cameraPoistionList[cameraPoistionList.length - 1];
-            const fixCenter = getExtentCenter(MAX_EXTENT);
+                lng: center[0],
+                lat: center[1]
+            }
             const target = {
-                bearing: pre.heading,
-                ...pre,
-                lng: fixCenter[0],
-                lat: fixCenter[1],
-                pitch: -1
-
+                lng: x,
+                lat: y
             }
             isFixExtenting = true;
             anime({
@@ -323,31 +329,27 @@ function limitViewExtent() {
                 ...target,
                 // round: 1,
                 easing: 'linear',
-                delay: 200,
+                delay: 60,
                 update: function () {
-                    // console.log(battery.bearing)
-                    const coordinate = [battery.lng, battery.lat];
-                    animateCamera(battery.bearing, coordinate, battery.pitch);
+                    animateCamera(heading, [battery.lng, battery.lat], pitch);
                 },
                 complete() {
                     isFixExtenting = false;
-                    cameraPoistionList = [];
                     removeLookAt();
-                    // animateCamera(battery.bearing, coordinate);
-                    // isRotating = false;
                 }
             });
 
+            // animateCamera(heading, [x, y], pitch);
 
         }
-
     })
 }
 
+//调试测试
 function addDebugPoints() {
     const coordinates = extentToPoints(MAX_EXTENT);
     const points = coordinates.map(c => {
-        const point = new DC.Billboard(c, './icons/区边界.png');
+        const point = new DC.Billboard(c, './icons/weilan.png');
         point.size = ICONSIZE;
         point.setStyle({
             pixelOffset: ICONOFFSET
@@ -355,15 +357,26 @@ function addDebugPoints() {
         return point;
     });
     debugLayer.addOverlays(points);
+    coordinates.push(coordinates[0]);
 
-    const coordinate = formatCoordinate(viewer.cameraPosition);
+    //围栏线
+    const line = new DC.Polyline(coordinates);
+    line.setStyle({
+        width: LINEWIDTH,
+        material: DC.Color.fromCssColorString(LINECOLOR),
+        // clampToGround: true
+    })
+    debugLayer.addOverlay(line);
+
+    //观察点
+    const coordinate = formatCoordinate(getViewerViewCenter());
     coordinate[2] = 0;
-    cameraPoint = new DC.Billboard(coordinate, './icons/camera.png');
-    cameraPoint.size = ICONSIZE;
-    cameraPoint.setStyle({
+    viewPoint = new DC.Billboard(coordinate, './icons/view-point.png');
+    viewPoint.size = ICONSIZE;
+    viewPoint.setStyle({
         pixelOffset: ICONOFFSET
     });
-    debugLayer.addOverlay(cameraPoint);
+    debugLayer.addOverlay(viewPoint);
 }
 
 function init() {
