@@ -221,7 +221,7 @@ const saveLineData = () => {
 }
 //压平3dtile
 function flat3Dtile(tileset) {
-   //经纬度边界
+    //经纬度边界
     const coordinates = [
         [120.66012318878829, 31.299229981057756, -0.019789444704101378]
         ,
@@ -244,6 +244,29 @@ function flat3Dtile(tileset) {
         positions: positions,
         id: new Date().getTime()
     });
+}
+
+function moveViewByOffset(direction) {
+    // console.log(x, y);
+    let x = 0, y = 0;
+    if (direction === 'left') {
+        x = 5;
+      
+    }
+    if (direction === 'right') {
+        x = -5;
+    }
+    if (direction === 'up') {
+        y = 5;
+    }
+    if (direction === 'down') {
+        y = -5;
+    }
+
+    viewer.camera.moveRight(x);
+    viewer.camera.moveDown(y);
+
+
 }
 
 function init() {
@@ -317,7 +340,14 @@ onUnmounted(() => {
             <!-- <button @click="drawEnd">结束</button> -->
         </div>
         <div class="flex main-container">
+
             <div class="line-data-panel">
+                <div>
+                    <button @click="moveViewByOffset('left')">左</button>
+                    <button @click="moveViewByOffset('right')">右</button>
+                    <button @click="moveViewByOffset('up')">上</button>
+                    <button @click="moveViewByOffset('down')">下</button>
+                </div>
                 <div class="line-content">
                     <h4>路线数据</h4>
                     <button @click="saveLineData">保存数据</button>
