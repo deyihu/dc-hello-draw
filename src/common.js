@@ -131,3 +131,26 @@ export function createTileSetLayer(viewer) {
     return tileset;
 }
 
+
+export function createTileSetLayerTest(viewer, callback) {
+    let tilesetLayer = new DC.TilesetLayer('tileset')
+    viewer.addLayer(tilesetLayer)
+    // let tileset = new DC.Tileset(
+    //     '//resource.dvgis.cn/data/3dtiles/dayanta/tileset.json'
+    // )
+    let tileset = new DC.Tileset(
+        'https://mapplat.z7z7z7.cn/model-8.7/download/terra_b3dms/tileset.json', {
+        maximumScreenSpaceError: 2
+    }
+    )
+    tileset.setHeight(-35)
+    tilesetLayer.addOverlay(tileset);
+    tileset._delegate.then(ctileset => {
+        if (callback) {
+            callback(ctileset);
+        }
+    })
+    return tileset;
+}
+
+

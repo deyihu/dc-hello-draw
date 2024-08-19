@@ -3,19 +3,22 @@ import * as DC from '@dvgis/dc-sdk';
 import { onMounted, ref, reactive, onUnmounted } from 'vue';
 import {
     getLabelStyle, createBaseLayer, createTileSetLayer,
+    createTileSetLayerTest,
     airPortCoordinate, formatCoordinate, ICONSIZE,
     ICONOFFSET, LINECOLOR, LINEWIDTH, createLabel,
     getMiddleCoordiante, MIDDLE_ICONSIZE
 } from './common';
+import Flat from './tilesetFlat';
 
 const mapcontainer = ref(null);
 
 const state = reactive({
     lineData: []
 })
-
+let Cesium;
 let viewer, plot, drawLayer, layer;
 let tempLine, tempDashLine, points, middlePoints;
+let flatTool;
 
 //路线里添加默认的机场数据
 state.lineData.push({
@@ -216,19 +219,59 @@ function clear() {
 const saveLineData = () => {
     console.log(JSON.stringify(state.lineData));
 }
+//压平3dtile
+function flat3Dtile(tileset) {
+   //经纬度边界
+    const coordinates = [
+        [120.66012318878829, 31.299229981057756, -0.019789444704101378]
+        ,
+        [120.66946095916448, 31.29880370268902, -0.019619747932695313]
+        ,
+        [120.66838918570947, 31.294087263558723, -0.0201230009447069]
+        ,
+        [120.6639462587578, 31.295697744127096, -0.019077814122802694]
+        ,
+        [120.66394339343844, 31.29666707954748, -0.021424744815436228]
+        ,
+        [120.65981405681158, 31.2968763046877, -0.02337918709302881]
+    ];
+    const positions = coordinates.map(c => {
+        const p = new DC.Position(...c);
+        return DC.Transform.transformWGS84ToCartesian(p)
+    });
+    // console.log(positions);
+    flatTool.addRegion({
+        positions: positions,
+        id: new Date().getTime()
+    });
+}
 
 function init() {
     function initViewer() {
         console.log(mapcontainer.value);
+        Cesium = DC.__namespace.Cesium;
         viewer = new DC.Viewer(mapcontainer.value);
 
         createBaseLayer(viewer);
-        const tileset = createTileSetLayer(viewer);
 
-        viewer.zoomTo(tileset)
+        // const tileset = createTileSetLayer(viewer);
+
+        const tileset = createTileSetLayerTest(viewer, (ctileset) => {
+            // const offsetHeight = -22;
+            // var cartographic = Cesium.Cartographic.fromCartesian(ctileset.boundingSphere.center);
+            // var surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, offsetHeight);
+            // var offset = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, offsetHeight);
+            // var translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
+            // tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation.clone());
+
+            flatTool = new Flat(ctileset);
+            flat3Dtile();
+        });
+
+        viewer.zoomTo(tileset);
         // window.viewer = viewer;
         viewer.on(DC.MouseEventType.CLICK, e => {
-            console.log(e);
+            // console.log(e);
             console.log(formatCoordinate(e.wgs84Position || e.wgs84SurfacePosition));
         })
 
