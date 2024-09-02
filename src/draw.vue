@@ -15,7 +15,8 @@ const mapcontainer = ref(null);
 
 const state = reactive({
     lineData: [],
-    flatModel: false
+    flatModel: false,
+    surfaceMode: false,
 })
 let Cesium;
 let viewer, plot, drawLayer, layer;
@@ -267,6 +268,15 @@ function flatChange() {
     }
 }
 
+function viewModeChange(){
+  if(state.surfaceMode){
+     viewer.changeSceneMode(2, 0)
+  }
+  if(state.surfaceMode){
+     viewer.changeSceneMode(3, 0)
+  }
+}
+
 function moveViewByOffset(direction) {
     // console.log(x, y);
     let x = 0, y = 0;
@@ -370,6 +380,7 @@ onUnmounted(() => {
                     <button @click="moveViewByOffset('up')">上</button>
                     <button @click="moveViewByOffset('down')">下</button>
                     <input type="checkbox" v-model="state.flatModel" @change="flatChange" /><label>压平模型</label>
+                    <input type="checkbox" v-model="state.surfaceMode" @change="viewModeChange" /><label>平面模式</label>
                 </div>
                 <div class="line-content">
                     <h4>路线数据</h4>
