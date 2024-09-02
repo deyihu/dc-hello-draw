@@ -84,7 +84,7 @@ class Flat {
      * @param {String} id 唯一标识
      */
     removeRegionById(id) {
-        debugger
+        // debugger
         if (!id) return;
 
         this.regionList = this.regionList.filter((attr) => {

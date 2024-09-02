@@ -6,14 +6,16 @@ import {
     createTileSetLayerTest,
     airPortCoordinate, formatCoordinate, ICONSIZE,
     ICONOFFSET, LINECOLOR, LINEWIDTH, createLabel,
-    getMiddleCoordiante, MIDDLE_ICONSIZE
+    getMiddleCoordiante, MIDDLE_ICONSIZE, TEST_TILESET_OFFSETHEIGHT,
+    TEST_TILESET_FLATHEIGHT
 } from './common';
 import Flat from './tilesetFlat';
 
 const mapcontainer = ref(null);
 
 const state = reactive({
-    lineData: []
+    lineData: [],
+    flatModel: false
 })
 let Cesium;
 let viewer, plot, drawLayer, layer;
@@ -219,8 +221,11 @@ function clear() {
 const saveLineData = () => {
     console.log(JSON.stringify(state.lineData));
 }
+
+const flatId = new Date().getTime();
+let tilesetData;
 //压平3dtile
-function flat3Dtile(tileset) {
+function flat3Dtile() {
     //经纬度边界
     const coordinates = [
         [120.66012318878829, 31.299229981057756, -0.019789444704101378]
@@ -242,8 +247,24 @@ function flat3Dtile(tileset) {
     // console.log(positions);
     flatTool.addRegion({
         positions: positions,
-        id: new Date().getTime()
+        id: flatId
     });
+}
+
+function removeFlat() {
+    if (flatTool) {
+        flatTool.removeRegionById(flatId);
+    }
+}
+
+function flatChange() {
+
+    if (state.flatModel) {
+        flat3Dtile();
+    } else {
+        tilesetData.setHeight(TEST_TILESET_OFFSETHEIGHT);
+        removeFlat();
+    }
 }
 
 function moveViewByOffset(direction) {
@@ -251,7 +272,7 @@ function moveViewByOffset(direction) {
     let x = 0, y = 0;
     if (direction === 'left') {
         x = 5;
-      
+
     }
     if (direction === 'right') {
         x = -5;
@@ -279,7 +300,7 @@ function init() {
 
         // const tileset = createTileSetLayer(viewer);
 
-        const tileset = createTileSetLayerTest(viewer, (ctileset) => {
+        const tileset = createTileSetLayerTest(viewer, (ctileset, dctileset) => {
             // const offsetHeight = -22;
             // var cartographic = Cesium.Cartographic.fromCartesian(ctileset.boundingSphere.center);
             // var surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, offsetHeight);
@@ -287,8 +308,9 @@ function init() {
             // var translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
             // tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation.clone());
 
-            flatTool = new Flat(ctileset);
-            flat3Dtile();
+            flatTool = new Flat(ctileset, { flatHeight: TEST_TILESET_FLATHEIGHT });
+            tilesetData = dctileset;
+            // flat3Dtile();
         });
 
         viewer.zoomTo(tileset);
@@ -347,6 +369,7 @@ onUnmounted(() => {
                     <button @click="moveViewByOffset('right')">右</button>
                     <button @click="moveViewByOffset('up')">上</button>
                     <button @click="moveViewByOffset('down')">下</button>
+                    <input type="checkbox" v-model="state.flatModel" @change="flatChange" /><label>压平模型</label>
                 </div>
                 <div class="line-content">
                     <h4>路线数据</h4>

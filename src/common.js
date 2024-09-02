@@ -131,6 +131,8 @@ export function createTileSetLayer(viewer) {
     return tileset;
 }
 
+export const TEST_TILESET_OFFSETHEIGHT = -12;
+export const TEST_TILESET_FLATHEIGHT = -22;
 
 export function createTileSetLayerTest(viewer, callback) {
     let tilesetLayer = new DC.TilesetLayer('tileset')
@@ -143,11 +145,11 @@ export function createTileSetLayerTest(viewer, callback) {
         maximumScreenSpaceError: 2
     }
     )
-    tileset.setHeight(-35)
+    tileset.setHeight(TEST_TILESET_OFFSETHEIGHT)
     tilesetLayer.addOverlay(tileset);
     tileset._delegate.then(ctileset => {
         if (callback) {
-            callback(ctileset);
+            callback(ctileset, tileset);
         }
     })
     return tileset;
