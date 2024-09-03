@@ -268,13 +268,14 @@ function flatChange() {
     }
 }
 
-function viewModeChange(){
-  if(state.surfaceMode){
-     viewer.changeSceneMode(2, 0)
-  }
-  if(state.surfaceMode){
-     viewer.changeSceneMode(3, 0)
-  }
+function viewModeChange() {
+    if (state.surfaceMode) {
+        viewer.changeSceneMode(2, 0)
+        // viewer.setPitchRange(0, 1)
+    } else {
+        viewer.changeSceneMode(3, 0)
+        // viewer.setPitchRange(0, 90)
+    }
 }
 
 function moveViewByOffset(direction) {
