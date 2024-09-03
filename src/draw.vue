@@ -268,14 +268,24 @@ function flatChange() {
     }
 }
 
-function viewModeChange() {
+function viewerDisablePitch() {
     if (state.surfaceMode) {
-        viewer.changeSceneMode(2, 0)
-        // viewer.setPitchRange(0, 1)
-    } else {
-        viewer.changeSceneMode(3, 0)
-        // viewer.setPitchRange(0, 90)
+        const { lng, lat, alt, heading, pitch, roll } = viewer.cameraPosition;
+        var position = Cesium.Cartesian3.fromDegrees(lng, lat, alt);
+        //相机聚焦位置并确定相机姿态
+        viewer.camera.setView({
+            destination: position,
+            orientation: {
+                heading: Cesium.Math.toRadians(0), //正北
+                pitch: Cesium.Math.toRadians(-90), //平视
+                // roll: Cesium.Math.toDegrees(roll)
+            }
+        });
     }
+}
+function viewModeChange() {
+    viewerDisablePitch();
+    viewer.scene.screenSpaceCameraController.enableTilt = !state.surfaceMode;
 }
 
 function moveViewByOffset(direction) {
@@ -325,11 +335,18 @@ function init() {
         });
 
         viewer.zoomTo(tileset);
-        // window.viewer = viewer;
+        window.viewer = viewer;
         viewer.on(DC.MouseEventType.CLICK, e => {
             // console.log(e);
             console.log(formatCoordinate(e.wgs84Position || e.wgs84SurfacePosition));
         })
+
+        viewer.on(DC.SceneEventType.CAMERA_CHANGED, e => {
+            // const { lng, lat, alt, heading, pitch, roll } = viewer.cameraPosition;
+            // if (pitch !== -90) {
+            viewerDisablePitch();
+            // }
+        });
 
         plot = new DC.Plot(viewer, {
             clampToModel: true
